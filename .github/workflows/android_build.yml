@@ -5,8 +5,6 @@ name: Android Build with Buildozer
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   build:
@@ -19,50 +17,27 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.11' # Python 3.11 고정
 
-    - name: Install System Dependencies
+    - name: Install Dependencies
       run: |
         sudo apt update
-        sudo apt install -y \
-          build-essential \
-          python3-pip \
-          openjdk-17-jdk \
-          git \
-          zip \
-          unzip
+        sudo apt install -y build-essential python3-pip openjdk-17-jdk
 
-    - name: Install Python Dependencies
-      run: |
-        pip install --upgrade pip
-        pip install Cython buildozer
+    - name: Install Cython
+      run: pip install Cython # Cython 설치
+    
+    - name: Install Buildozer
+      run: pip install buildozer
 
-    - name: Accept Android SDK Licenses
-      run: |
-        mkdir -p $ANDROID_SDK_ROOT/licenses
-        echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
-        echo -e "\n504667f4c0de7973335447fc6aedc8a49b14150b" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
-      continue-on-error: true
-
-    - name: Verify Licenses
-      run: |
-        cat $ANDROID_SDK_ROOT/licenses/android-sdk-license || echo "License file created"
-
-    - name: Build APK with Buildozer
+    - name: Run Buildozer
       run: buildozer android debug
+      env:
+        # Android SDK 라이선스 자동 수락 설정
+        BUILD_ACCEPT_SDK_LICENSE: 1 
 
-    - name: Upload APK Artifact
-      if: success()
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: english-word-quiz-apk
-        path: bin/*.apk
-        retention-days: 30
-
-    - name: Upload Build Logs on Failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-logs
-        path: .buildozer/
-        retention-days: 7
+        path: bin/*.apk # APK 파일 업로드 경로 명확히 지정 (최종 수정)
