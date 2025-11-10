@@ -1,0 +1,37 @@
+# .github/workflows/android_build.yml
+
+name: Android Build with Buildozer # 작업 이름
+
+on:
+  push:
+    branches: [ main ] # main 브랜치에 코드를 올릴 때마다 이 작업을 실행합니다.
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # GitHub이 제공하는 우분투(리눅스) 서버에서 실행
+
+    steps:
+    - name: Checkout Code # 1. GitHub에서 코드를 다운로드
+      uses: actions/checkout@v4
+
+    - name: Set up Python # 2. 파이썬 환경 설정
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Install Dependencies # 3. 빌드에 필요한 도구 설치
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential python3-pip openjdk-17-jdk
+
+    - name: Install Buildozer # 4. Buildozer 설치
+      run: pip install buildozer
+
+    - name: Run Buildozer # 5. Buildozer를 실행하여 APK 파일 생성
+      run: buildozer android debug
+
+    - name: Upload Artifact # 6. 결과 파일 (.apk) 저장
+      uses: actions/upload-artifact@v4
+      with:
+        name: english-word-quiz-apk # 다운로드될 파일 이름
+        path: bin/*.apk # bin 폴더 안에 있는 apk 파일을 가져옴

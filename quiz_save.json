@@ -1,0 +1,27 @@
+{
+  "words": [
+    [
+      "사과",
+      "apple"
+    ],
+    [
+      "학교",
+      "school"
+    ],
+    [
+      "책",
+      "book"
+    ],
+    [
+      "연필",
+      "pencil"
+    ],
+    [
+      "독점,전매",
+      "monopoly"
+    ]
+  ],
+  "current_word_set_name": "기본",
+  "is_dark_mode": true,
+  "custom_word_sets": {}
+}
