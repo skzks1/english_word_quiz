@@ -1,40 +1,43 @@
 # .github/workflows/android_build.yml
 
-name: Android Build with Buildozer # 작업 이름
+name: Android Build with Buildozer
 
 on:
   push:
-    branches: [ main ] # main 브랜치에 코드를 올릴 때마다 이 작업을 실행합니다.
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest # GitHub이 제공하는 우분투(리눅스) 서버에서 실행
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code # 1. GitHub에서 코드를 다운로드
+    - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Set up Python # 2. 파이썬 환경 설정 (가장 먼저 실행되어야 함)
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11' # 호환성을 위해 안정적인 버전(3.11) 명시
+        python-version: '3.11' # 안정적인 버전 사용
 
-    - name: Install Dependencies # 3. 빌드에 필요한 리눅스 패키지 설치
+    - name: Install Dependencies
       run: |
         sudo apt update
         sudo apt install -y build-essential python3-pip openjdk-17-jdk
 
-    - name: Install Cython # 4. Cython 설치 (Kivy 코드를 변환하는 데 필수)
+    - name: Install Cython
       run: pip install Cython
     
-    - name: Install Buildozer # 5. Buildozer 설치
+    - name: Install Buildozer
       run: pip install buildozer
 
-    - name: Run Buildozer # 6. Buildozer를 실행하여 APK 파일 생성
+    - name: Run Buildozer # 👈 여기에 환경 변수 추가
       run: buildozer android debug
+      env:
+        # Buildozer가 Android SDK 라이선스를 자동으로 수락하도록 설정
+        BUILD_ACCEPT_SDK_LICENSE: 1 
 
-    - name: Upload Artifact # 7. 결과 파일 (.apk) 저장
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: english-word-quiz-apk # 다운로드될 파일 이름
-        path: bin/*.apk # bin 폴더 안에 있는 apk 파일을 가져옴
+        name: english-word-quiz-apk
+        path: bin/*.apk
