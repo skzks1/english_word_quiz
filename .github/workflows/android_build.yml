@@ -17,7 +17,7 @@ jobs:
     - name: Set up Python # 2. 파이썬 환경 설정
       uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: '3.11'
 
     - name: Install Dependencies # 3. 빌드에 필요한 도구 설치
       run: |
