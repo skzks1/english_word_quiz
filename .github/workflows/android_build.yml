@@ -14,23 +14,26 @@ jobs:
     - name: Checkout Code # 1. GitHub에서 코드를 다운로드
       uses: actions/checkout@v4
 
-    - name: Set up Python # 2. 파이썬 환경 설정
+    - name: Set up Python # 2. 파이썬 환경 설정 (가장 먼저 실행되어야 함)
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.11' # 호환성을 위해 안정적인 버전(3.11) 명시
 
-    - name: Install Dependencies # 3. 빌드에 필요한 도구 설치
+    - name: Install Dependencies # 3. 빌드에 필요한 리눅스 패키지 설치
       run: |
         sudo apt update
         sudo apt install -y build-essential python3-pip openjdk-17-jdk
 
-    - name: Install Buildozer # 4. Buildozer 설치
+    - name: Install Cython # 4. Cython 설치 (Kivy 코드를 변환하는 데 필수)
+      run: pip install Cython
+    
+    - name: Install Buildozer # 5. Buildozer 설치
       run: pip install buildozer
 
-    - name: Run Buildozer # 5. Buildozer를 실행하여 APK 파일 생성
+    - name: Run Buildozer # 6. Buildozer를 실행하여 APK 파일 생성
       run: buildozer android debug
 
-    - name: Upload Artifact # 6. 결과 파일 (.apk) 저장
+    - name: Upload Artifact # 7. 결과 파일 (.apk) 저장
       uses: actions/upload-artifact@v4
       with:
         name: english-word-quiz-apk # 다운로드될 파일 이름
