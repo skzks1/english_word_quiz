@@ -2,7 +2,7 @@
 title = English Word Quiz
 package.name = wordquiz
 package.domain = com.skzks1
-package.version = 1.0.4
+version = 1.0.4
 requirements = python3, kivy, requests
 android.api = 33
 source.dir = .
