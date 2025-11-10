@@ -5,6 +5,8 @@ name: Android Build with Buildozer
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
@@ -17,27 +19,50 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11' # 안정적인 버전 사용
+        python-version: '3.11'
 
-    - name: Install Dependencies
+    - name: Install System Dependencies
       run: |
         sudo apt update
-        sudo apt install -y build-essential python3-pip openjdk-17-jdk
+        sudo apt install -y \
+          build-essential \
+          python3-pip \
+          openjdk-17-jdk \
+          git \
+          zip \
+          unzip
 
-    - name: Install Cython
-      run: pip install Cython
-    
-    - name: Install Buildozer
-      run: pip install buildozer
+    - name: Install Python Dependencies
+      run: |
+        pip install --upgrade pip
+        pip install Cython buildozer
 
-    - name: Run Buildozer # 👈 여기에 환경 변수 추가
+    - name: Accept Android SDK Licenses
+      run: |
+        mkdir -p $ANDROID_SDK_ROOT/licenses
+        echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+        echo -e "\n504667f4c0de7973335447fc6aedc8a49b14150b" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
+      continue-on-error: true
+
+    - name: Verify Licenses
+      run: |
+        cat $ANDROID_SDK_ROOT/licenses/android-sdk-license || echo "License file created"
+
+    - name: Build APK with Buildozer
       run: buildozer android debug
-      env:
-        # Buildozer가 Android SDK 라이선스를 자동으로 수락하도록 설정
-        BUILD_ACCEPT_SDK_LICENSE: 1 
 
-    - name: Upload Artifact
+    - name: Upload APK Artifact
+      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: english-word-quiz-apk
         path: bin/*.apk
+        retention-days: 30
+
+    - name: Upload Build Logs on Failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: .buildozer/
+        retention-days: 7
