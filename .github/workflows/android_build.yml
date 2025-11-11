@@ -17,20 +17,25 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11' # Python 3.11 고정
+        python-version: '3.11'
 
-    - name: Install Dependencies # 1. 기존의 핵심 패키지 설치
+    - name: Install Dependencies
       run: |
         sudo apt update
         sudo apt install -y build-essential python3-pip openjdk-17-jdk
 
-    - name: Install native build dependencies # 2. [오류 해결] Autoconf/Libtool 등 필수 빌드 도구 설치
+    - name: Install native build dependencies # 1. Autoconf 오류 해결을 위한 도구 설치 (Copilot 추천)
       run: |
         sudo apt-get install -y \
           autoconf automake libtool libtool-bin m4 \
           pkg-config build-essential gettext libffi-dev ca-certificates
+          
+    - name: Run autoupdate and autoreconf # 2. [핵심 해결] 꼬인 configure 파일 강제 업데이트 (Copilot 추천)
+      run: |
+        autoupdate || true
+        autoreconf -fi || true
     
-    - name: Install Cython # 3. Cython 설치
+    - name: Install Cython
       run: pip install Cython
 
     - name: Install Buildozer
@@ -39,11 +44,11 @@ jobs:
     - name: Run Buildozer
       run: buildozer android debug
       env:
-        # 4. [오류 해결] Android SDK 라이선스 자동 수락 설정
+        # Android SDK 라이선스 자동 수락 설정
         BUILD_ACCEPT_SDK_LICENSE: 1 
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: english-word-quiz-apk
-        path: bin/*.apk # APK 파일 업로드 경로 명확히 지정
+        path: bin/*.apk
