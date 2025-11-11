@@ -37,21 +37,33 @@ jobs:
         pip install --upgrade pip
         pip install Cython buildozer
 
-    - name: Create Android Licenses Directory
+    - name: Setup Android Licenses
       run: |
         mkdir -p ~/.android
         mkdir -p $ANDROID_SDK_ROOT/licenses
-
-    - name: Accept All Android SDK Licenses
-      run: |
+        
+        # Accept all licenses
         echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
         echo -e "\n504667f4c0de7973335447fc6aedc8a49b14150b" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
         echo -e "\n1d8b82cbbee477f875a3b4aa69433636da6b826a" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
-        cat $ANDROID_SDK_ROOT/licenses/android-sdk-license
+        
+        # Also create in home directory
+        cp $ANDROID_SDK_ROOT/licenses/android-sdk-license ~/.android/
+        
+        # List to verify
+        ls -la $ANDROID_SDK_ROOT/licenses/
 
     - name: Build APK with Buildozer
       run: buildozer android debug
       timeout-minutes: 120
+      env:
+        ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+
+    - name: Check Build Output
+      if: always()
+      run: |
+        ls -la bin/ || echo "No bin directory"
+        find . -name "*.apk" -type f 2>/dev/null || echo "No APK found"
 
     - name: Upload APK Artifact
       if: success()
@@ -61,10 +73,11 @@ jobs:
         path: bin/*.apk
         retention-days: 30
 
-    - name: Upload Build Logs on Failure
-      if: failure()
+    - name: Upload Build Logs
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: build-logs
-        path: .buildozer/
+        name: build-output
+        path: |
+          .buildozer/
         retention-days: 7
