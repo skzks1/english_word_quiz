@@ -25,21 +25,20 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    # 1. Autoconf, Libtool, 그리고 Git이 설치되어 있는지 확인하고 경로에 추가
+    # 1. Autoconf, Git 등 필수 네이티브 빌드 도구 설치 및 32비트 라이브러리 추가
     - name: Install system and native build dependencies (and ensure git is present)
       run: |
         sudo apt-get update
-        # build-essential 패키지에 Git이 포함되어 있으나, 확실하게 명시적으로 설치합니다.
         sudo apt-get install -y --no-install-recommends \
           build-essential git wget curl unzip ca-certificates \
           autoconf automake libtool libtool-bin m4 \
           pkg-config gettext \
           libffi-dev libssl-dev zlib1g-dev \
-          python3-dev
+          python3-dev \
+          lib32stdc++6 lib32z1 # Android NDK/SDK toolchain requires 32-bit compatibility libs
         
-        # Git 경로가 PATH에 제대로 잡혔는지 확인 (일반적으로 /usr/bin/git)
         echo "Git path: $(which git)"
-        git --version # Git이 정상 작동하는지 확인
+        git --version
 
     # 2. Autoconf 오류 최종 해결 단계
     - name: Conditional autoupdate/autoreconf
@@ -55,53 +54,56 @@ jobs:
         pip install --upgrade Cython buildozer python-for-android
 
     # =========================================================
-    # 🛑 [핵심 해결] SDK 경로/Aidl/License 오류를 위한 수동 SDK 설정
+    # 🛑 [최종 해결] sdkmanager not found, 경로 불일치, 라이선스 오류 동시 해결
     # =========================================================
-    - name: Install Android SDK command-line tools and build-tools
-      env:
-        ANDROID_SDK_ROOT: /home/runner/.buildozer/android/platform/android-sdk
+    - name: Install Android SDK command-line tools and packages
       run: |
         set -e
-        sdk_root="$ANDROID_SDK_ROOT"
-        mkdir -p "$sdk_root"
+        # Buildozer가 기대하는 경로를 SDK 루트로 설정
+        SDK_ROOT=/home/runner/.buildozer/android/platform/android-sdk
+        mkdir -p "$SDK_ROOT"
 
         # 1) Command Line Tools 다운로드 및 설치
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O /tmp/cmdline-tools.zip
-        unzip -q /tmp/cmdline-tools.zip -d "$sdk_root/cmdline-tools"
+        unzip -q /tmp/cmdline-tools.zip -d "$SDK_ROOT/cmdline-tools"
 
-        # 압축 해제된 디렉터리 이름 정규화
-        if [ -d "$sdk_root/cmdline-tools/cmdline-tools" ]; then
-          mv "$sdk_root/cmdline-tools/cmdline-tools" "$sdk_root/cmdline-tools/latest"
+        # 압축 해제된 디렉터리 이름 정규화 (latest 폴더 구조로 변경)
+        if [ -d "$SDK_ROOT/cmdline-tools/cmdline-tools" ]; then
+          mv "$SDK_ROOT/cmdline-tools/cmdline-tools" "$SDK_ROOT/cmdline-tools/latest"
         fi
         
-        # 2) Buildozer가 기대하는 레거시 경로(tools/bin)에 심볼릭 링크 생성
-        mkdir -p "$sdk_root/tools/bin"
-        ln -sf "$sdk_root/cmdline-tools/latest/bin/sdkmanager" "$sdk_root/tools/bin/sdkmanager"
-        chmod +x "$sdk_root/tools/bin/sdkmanager"
+        # sdkmanager 바이너리 전체 경로 지정
+        SDK_MANAGER_BIN="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
         
-        # 3) PATH에 sdkmanager 경로 추가
-        echo "$sdk_root/cmdline-tools/latest/bin" >> $GITHUB_PATH
-        echo "$sdk_root/tools/bin" >> $GITHUB_PATH
-
-        # 4) 라이선스 수락 및 필수 패키지 설치
-        yes | sdkmanager --sdk_root="$sdk_root" --licenses || true
-        sdkmanager --sdk_root="$sdk_root" \
+        # Buildozer가 기대하는 레거시 경로(tools/bin)에 심볼릭 링크 생성
+        mkdir -p "$SDK_ROOT/tools/bin"
+        ln -sf "$SDK_MANAGER_BIN" "$SDK_ROOT/tools/bin/sdkmanager"
+        chmod +x "$SDK_ROOT/tools/bin/sdkmanager"
+        
+        # 2) 라이선스 수락 및 필수 패키지 설치
+        # 주의: 명령어 전체 경로를 사용하여 'command not found' 오류를 방지합니다.
+        yes | "$SDK_MANAGER_BIN" --sdk_root="$SDK_ROOT" --licenses || true
+        
+        "$SDK_MANAGER_BIN" --sdk_root="$SDK_ROOT" \
           "platform-tools" \
           "platforms;android-33" \
           "build-tools;33.0.2"
         
-        # 5) platform-tools 경로를 PATH에 추가하여 adb/aidl 등을 인식하도록 설정
-        echo "$sdk_root/platform-tools" >> $GITHUB_PATH
+        # 3) 환경 변수를 GITHUB_ENV로 내보내 Buildozer 단계에서 사용할 수 있도록 함
+        echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> $GITHUB_ENV
+        echo "ANDROID_HOME=$SDK_ROOT" >> $GITHUB_ENV
+        
+        # 4) platform-tools 경로와 레거시 경로를 PATH에 추가 (Buildozer가 aidl/adb 등을 찾을 수 있도록)
+        echo "$SDK_ROOT/platform-tools" >> $GITHUB_PATH
+        echo "$SDK_ROOT/tools/bin" >> $GITHUB_PATH
+        echo "$SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
 
-    # 모든 환경 설정이 완료된 후 Buildozer 실행
+    # 모든 환경 설정이 완료된 후 Buildozer 실행 (환경 변수는 GITHUB_ENV에서 상속)
     - name: Run Buildozer (Final Build)
       run: buildozer android debug --verbose
       env:
         BUILD_ACCEPT_SDK_LICENSE: 1
-        # Buildozer가 SDK를 인식하도록 환경 변수 명시
-        ANDROID_SDK_ROOT: /home/runner/.buildozer/android/platform/android-sdk
-        ANDROID_HOME: /home/runner/.buildozer/android/platform/android-sdk
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
