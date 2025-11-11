@@ -1,51 +1,49 @@
-GitHub Copilot Chat Assistant입니다.
+# .github/workflows/android_build.yml
 
-문제 요약 (로그 근거)
-- 핵심 오류: autoreconf/Autoconf 단계 실패
-  - "configure.ac:418: You should run autoupdate."
-  - "configure.ac:215: error: possibly undefined macro: LT_SYS_SYMBOL_USCORE"
-  - 결과: pythonforandroid toolchain 호출 실패 → Buildozer 실패
-- 원인 추정: CI 환경에 필요한 autotools/libtool 매크로(예: LT_SYS_SYMBOL_USCORE)를 제공하는 시스템 패키지(m4, libtool, libtool-bin, autoconf 등)가 없거나 버전 불일치
+name: Android Build with Buildozer
 
-즉시 적용 가능한 해결책 (권장)
-1) GitHub Actions 워크플로에서 빌드 전에 필요한 시스템 패키지 설치
-- .github/workflows/android_build.yml 파일에 Buildozer 실행 이전에 다음 스텝을 추가하세요.
-- 파일 참조: .github/workflows/android_build.yml (ref: e2abd502fa41793559d7e68bfd964e71ef85fb2d)
+on:
+  push:
+    branches: [ main ]
 
-예시 추가 스텝 (YAML)
-- name: Install native build dependencies
-  run: |
-    sudo apt-get update
-    sudo apt-get install -y \
-      autoconf autoconf-archive automake libtool libtool-bin m4 \
-      pkg-config build-essential gettext \
-      libffi-dev ca-certificates
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-설명:
-- libtool / libtool-bin, m4, autoconf/automake이 autoreconf가 필요로 하는 매크로와 도구를 제공합니다.
-- libffi-dev는 libffi 빌드에 필요할 수 있어 안전상 포함했습니다.
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-2) CI에서 설치로 해결되지 않으면(또는 로컬 수정 원하면) repository에서 autoupdate/ autoreconf 실행 후 변경사항 커밋
-- 로컬에서:
-  - autoupdate (configure.ac을 최신 autoconf 문법으로 업데이트)
-  - autoreconf -fi
-  - 변경된 파일(commit) → 푸시 → CI 재실행
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11' # Python 3.11 고정
 
-로컬 명령 예:
-- autoupdate
-- autoreconf -fi
+    - name: Install Dependencies # 1. 기존의 핵심 패키지 설치
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential python3-pip openjdk-17-jdk
 
-주의:
-- autoupdate/autoreconf는 configure.ac / aclocal.m4 / acinclude.m4 등을 수정합니다. 자동으로 변경된 파일을 커밋하기 전에 변경 내용 검토 권장.
+    - name: Install native build dependencies # 2. [오류 해결] Autoconf/Libtool 등 필수 빌드 도구 설치
+      run: |
+        sudo apt-get install -y \
+          autoconf automake libtool libtool-bin m4 \
+          pkg-config build-essential gettext libffi-dev ca-certificates
+    
+    - name: Install Cython # 3. Cython 설치
+      run: pip install Cython
 
-추가 권장 사항
-- 빌드 안정성 향상: 워크플로에서 사용하는 이미지 또는 runner에 필요한 패키지를 미리 설치하여 동일한 오류 반복 방지.
-- 빌드 로그 레벨을 높여(예: Buildozer에 log_level = 2) 문제 원인 파악을 쉽게 함.
-- pythonforandroid / buildozer 버전 호환성 확인: 간혹 최신 NDK/SDK와 p4a 릴리스가 충돌할 수 있으므로 필요 시 p4a/buildozer 버전 고정 고려.
+    - name: Install Buildozer
+      run: pip install buildozer
 
-간단 체크리스트 (우선순위)
-1. 워크플로에 위의 apt-get 설치 스텝 추가 → CI 재실행
-2. 여전히 실패하면 로컬에서 autoupdate & autoreconf -fi 실행 → 변경 검토 및 커밋 → CI 재실행
-3. 계속 실패하면 빌드 로그(전체, log_level=2)와 현재 사용 중인 buildozer/p4a/NDK 버전 정보 제공해 주세요. 제가 다음 단계 제안하겠습니다.
+    - name: Run Buildozer
+      run: buildozer android debug
+      env:
+        # 4. [오류 해결] Android SDK 라이선스 자동 수락 설정
+        BUILD_ACCEPT_SDK_LICENSE: 1 
 
-원하시면 제가 바로 .github/workflows/android_build.yml 파일에 적용할 구체적인 패치 내용을 만들어 드리겠습니다. 어떤 방식(워크플로 변경만 / 로컬 파일 수정 포함)을 원하시나요?
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: english-word-quiz-apk
+        path: bin/*.apk # APK 파일 업로드 경로 명확히 지정
