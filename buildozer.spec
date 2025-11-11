@@ -4,7 +4,7 @@
 title = EnglishWordQuiz
 
 # (필수) 최종 APK 파일 버전
-version = 1.0.13
+version = 1.0.14
 
 # (필수) Python 패키지 요구사항 (Kivy 앱이라면 kivy 필수)
 requirements = python3, kivy
