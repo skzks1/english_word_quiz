@@ -1,54 +1,31 @@
-# .github/workflows/android_build.yml
-
-name: Android Build with Buildozer
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Install Dependencies
+# 파일: .github/workflows/android_build.yml (ref f22c2c9900e1a32d6ae0f78fbff949529c7ab7b3)
+    - name: Install system and native build dependencies
       run: |
-        sudo apt update
-        sudo apt install -y build-essential python3-pip openjdk-17-jdk
-
-    - name: Install native build dependencies # 1. Autoconf 오류 해결을 위한 도구 설치 (Copilot 추천)
-      run: |
-        sudo apt-get install -y \
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          build-essential git wget curl unzip ca-certificates \
           autoconf automake libtool libtool-bin m4 \
-          pkg-config build-essential gettext libffi-dev ca-certificates
-          
-    - name: Run autoupdate and autoreconf # 2. [핵심 해결] 꼬인 configure 파일 강제 업데이트 (Copilot 추천)
+          pkg-config gettext \
+          libffi-dev libssl-dev zlib1g-dev \
+          python3-dev openjdk-17-jdk
+
+    - name: Conditional autoupdate/autoreconf (only if configure.ac exists)
       run: |
-        autoupdate || true
-        autoreconf -fi || true
-    
-    - name: Install Cython
-      run: pip install Cython
+        if [ -f configure.ac ]; then
+          echo "configure.ac found — running autoupdate/autoreconf"
+          autoupdate || true
+          autoreconf -fi || true
+        else
+          echo "configure.ac not found — skipping autoupdate/autoreconf"
+        fi
 
-    - name: Install Buildozer
-      run: pip install buildozer
+    - name: Upgrade pip and install Python build tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install --upgrade Cython buildozer python-for-android
 
-    - name: Run Buildozer
-      run: buildozer android debug
+    - name: Run Buildozer (verbose)
+      run: |
+        buildozer android debug --verbose
       env:
-        # Android SDK 라이선스 자동 수락 설정
-        BUILD_ACCEPT_SDK_LICENSE: 1 
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: english-word-quiz-apk
-        path: bin/*.apk
+        BUILD_ACCEPT_SDK_LICENSE: 1
