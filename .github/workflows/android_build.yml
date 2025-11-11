@@ -30,7 +30,11 @@ jobs:
           openjdk-17-jdk \
           git \
           zip \
-          unzip
+          unzip \
+          autoconf \
+          automake \
+          libtool \
+          pkg-config
 
     - name: Install Python Dependencies
       run: |
