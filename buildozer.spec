@@ -20,10 +20,10 @@ source.dir = .
 main.py = main.py
 
 # Icon for the application
-icon.filename = %(source.dir)s/icon.png
+icon.filename = %(source.dir)sicon.png
 
 # Android 빌드 설정
-[app:android]
+[appandroid]
 
 # 최소 API 레벨 (Kivy 기본값 21 사용)
 android.minapi = 21
@@ -33,5 +33,3 @@ android.targetapi = 33
 
 # 필요한 권한 (필요 시 주석 해제)
 # android.permissions = INTERNET, WAKE_LOCK
-
-# 이외의 모든 설정은 기본값 유지
