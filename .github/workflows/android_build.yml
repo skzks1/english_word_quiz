@@ -41,9 +41,9 @@ jobs:
     - name: Upgrade pip and install Python build tools
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        # Cython은 업그레이드하고, buildozer/p4a는 안정 버전으로 고정
         python -m pip install --upgrade Cython
-        python -m pip install buildozer==1.5.0 python-for-android==2024.0.1
+        # ⬇️ [수정] 2024.0.1 -> 2024.1.21 (오타 수정)
+        python -m pip install buildozer==1.5.0 python-for-android==2024.1.21
     # --- ---------------------- ---
 
     - name: Install Android SDK command-line tools and packages
