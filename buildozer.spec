@@ -1,64 +1,37 @@
-name: Android Build with Buildozer
+[app]
 
-on:
-  push:
-    branches: [ main ]
+# (필수) 앱 제목
+title = EnglishWordQuiz
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+# (필수) 최종 APK 파일 버전
+version = 1.0.9
 
-    steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+# (필수) Python 패키지 요구사항 (Kivy 앱이라면 kivy 필수)
+requirements = python3, kivy
 
-    - name: Setup Java (for Android tools)
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+# (필수) 패키지 이름 (com.yourdomain.yourapp)
+package.name = com.quiz.englishwordquiz
 
-    - name: Install system and native build dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends \
-          build-essential git wget curl unzip ca-certificates \
-          autoconf automake libtool libtool-bin m4 \
-          pkg-config gettext \
-          libffi-dev libssl-dev zlib1g-dev \
-          python3-dev
+# 패키지 도메인
+package.domain = org.test
 
-    - name: Show versions (debug)
-      run: |
-        autoconf --version || true
-        autoreconf --version || true
-        libtoolize --version || true
-        python --version
-        pip --version
+# Kivy main file to init
+source.dir = .
+main.py = main.py
 
-    - name: Conditional autoupdate/autoreconf (only if configure.ac exists)
-      run: |
-        if [ -f configure.ac ]; then
-          echo "configure.ac found — running autoupdate/autoreconf"
-          autoupdate || true
-          autoreconf -fi || true
-        else
-          echo "configure.ac not found — skipping autoupdate/autoreconf"
-        fi
+# Icon for the application
+icon.filename = %(source.dir)s/icon.png
 
-    - name: Upgrade pip and install Python build tools
-      run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install --upgrade Cython buildozer python-for-android
+# Android 빌드 설정
+[app:android]
 
-    - name: Run Buildozer (verbose)
-      env:
-        BUILD_ACCEPT_SDK_LICENSE: 1
-      run: |
-        buildozer android debug --verbose
+# 최소 API 레벨 (Kivy 기본값 21 사용)
+android.minapi = 21
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: english-word-quiz-apk
-        path: bin/*.apk
+# 타겟 API 레벨
+android.targetapi = 33
+
+# 필요한 권한 (필요 시 주석 해제)
+# android.permissions = INTERNET, WAKE_LOCK
+
+# 이외의 모든 설정은 기본값 유지
